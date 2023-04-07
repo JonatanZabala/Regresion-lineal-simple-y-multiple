@@ -1,0 +1,844 @@
+---
+title: 'Regresión simple y múltiple dataset FIFA'
+author: "Jonatan Zabala"
+output:
+  html_document:
+    highlight: textmate
+    theme: yeti
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+![](https://www.ucentral.edu.co/sites/default/files/inline-images/identificadores-Centrados_en_ti_logo-h.png)
+
+<p style="background: #ffdd00; color:#343a40; font-weight:plain; padding:8px; border:3px solid #ffdd00; margin-top:20px; margin-bottom:10px; text-align:LEFT; font-size:20px; border-radius:10px;">Descripción del Dataset.</p>
+
+
+El dataset "caso" utilizado para el desarrollo de este taller, incluye los datos de los jugadores del videojuego de simulación de fútbol FIFA desarrollado por EA Sports (electronic arts), disponible para las plataformas de videojuegos de PlayStation y Xbox principalmente.
+
+Este dataset extraído de la plataforma Kaggle está compuesto de 18 variables y 150 registros. De las cuales 15 variables son cuantitativas o numéricas y 3 variables son categóricas o cualitativas.
+
+Entre las variables categóricas encontramos datos como el club en el cual milita el jugador, el pie más hábil y su posición dentro del equipo. Por otro lado, entre las variables numéricas encontramos datos como edad, estatura, peso en kg, entre otras variables que describiremos a continuación.
+
+<p style="background: #ffdd00; color:#343a40; font-weight:plain; padding:8px; border:3px solid #ffdd00; margin-top:20px; margin-bottom:10px; text-align:LEFT; font-size:20px; border-radius:10px;">Librerías.</p>
+
+```{r, echo=T, eval=T, include=T, warning=FALSE, message=F}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(shiny)
+library(fdth)
+library(nortest)
+library(PASWR2)
+library(lmtest)
+library(car)
+library(GGally)
+library(psych)
+library(corrplot)
+library(MASS)
+library(trafo)
+library(gridExtra)
+```
+
+# PARTE 1. Exploración.
+
+## 1.Utilice el dataset: caso
+
+```{r, echo=T, eval=T, include=F, warning=FALSE, message=F}
+caso <- read_csv("C:/Users/Jonathan/OneDrive - ucentral.edu.co/Escritorio/caso.csv")
+```
+
+
+## 2. Defina las siguientes variables que aparecen en el dataset
+
+<p style="background: #ffdd00; color:#343a40; font-weight:plain; padding:8px; border:3px solid #ffdd00; margin-top:20px; margin-bottom:10px; text-align:LEFT; font-size:20px; border-radius:10px;">Definición de las variables.</p>
+
+- **club:** Variable categórica que define el club al cual pertenece el jugador.
+- **preferred_foot:** Variable categórica, muestra el pié más hábil del jugador, si es derecho _Right_ o izquierdo _Left_
+- **team_position:** Variable categórica que define la posición del jugador en el equipo. Existen 19 posiciones diferentes, entre las cuales tenemos:
+
+
+- **age:** Variable numérica que indica la edad del jugador.
+- **height_cm:** Variable que se refiere a la estatura en centímetros del jugador.
+- **weight_kg:** Variable numérica, se refiere al peso en kilogramos del jugador.
+- **overall:** Variable numérica, calificación general del jugador.
+- **potential:** Variable numérica, mide el potencial de cada jugador para ser considerado de la siguiente manera: "Mostrar un gran potencial" significa que un jugador crecerá hasta un máximo de 80-84, "una proyección emocionante" alcanzará los 85-89 y un jugador etiquetado como "tiene potencial para ser especial" llegará a 90 o más.
+- **value_eur:** Variable en formato numérico que significa el valor económico de un jugador.
+- **wage_eur:** Variable numérica que significa salario del jugador.
+- **release_clause_eur:** Variable en formato numérico, básicamente es una cláusula insertada en el contrato de un jugador que permite que otros clubes intenten fichar a ese jugador. Siempre y cuando, por supuesto, cumplan con el monto de la cláusula.
+- **shooting:** Variable numérica que mide las habilidades de tiro, entre estas habilidades de tiro se encuentran definición, potencia de tiro, voleas, tiro lejano, penales entre otras.
+- **passing:** Variable numérica que mide la capacidad del jugador de realizar pases efectivos, entre las habilidades destacadas se halla la visión, centros, precisión de tiros libres, pase corto y largo, curva.
+- **dribbling:** Variable numérica, mide el regate o la capacidad de un jugador de superar al jugador adversario desde diferentes perspectivas; tales como, agilidad, balance, reacción, control de balón.
+- **defending:** Variable numérica que mide la capacidad del jugador de defender la posición y obtener el dominio del balón, entre las habilidades del defensor se encuentran las intercepciones, cabezazo, marcaje, entrada limpia, barrida.
+- **physic:** Variable numérica que mide en un jugador la fuerza, el salto, la energía, agresión.
+- **pace:** Variable numérica que mide la velocidad del jugador bajo los siguientes criterios: aceleración y velocidad final.
+
+Fuente: **GUIA DE ATRIBUTOS – FIFA ULTIMATE TEAM** Tomado de: https://www.todoultimateteam.com/guia-de-atributos-fifa-ultimate-team/
+
+
+<p style="background: #ffdd00; color:#343a40; font-weight:plain; padding:8px; border:3px solid #ffdd00; margin-top:20px; margin-bottom:10px; text-align:LEFT; font-size:20px; border-radius:10px;">Exploración del Dataset.</p>
+
+Procedemos a realizar una exploración rápida del dataset
+
+```{r}
+head(caso,5);
+```
+
+```{r}
+tail(caso,5)
+```
+
+```{r}
+str(caso)
+```
+
+```{r}
+summary(caso)
+```
+Observaremos ahora si existen variables con datos faltantes.
+
+```{r}
+sapply(caso, function(x) sum(is.na(x)))
+```
+
+Dado lo anterior, podemos evidenciar que el dataset caso no contiene datos faltantes o NA.
+
+# PARTE 2: Regresión Lineal Simple
+
+
+<p style="background: #ffdd00; color:#343a40; font-weight:plain; padding:8px; border:3px solid #ffdd00; margin-top:20px; margin-bottom:10px; text-align:LEFT; font-size:20px; border-radius:10px;"> Extracción de la muestra con 130 datos.</p>
+
+
+## 1. Dataframe 'aleatorio'.
+
+Procedemos a crear un dataset llamado _aleatorio_ con 130 datos aleatorios extraídos del dataset **caso**, instalado anteriormente.
+
+```{r}
+set.seed(2)
+caso1 <- sample(1:nrow(caso), 130)
+aleatorio <- caso[caso1, ]
+aleatorio
+```
+
+Ahora, al dataset **caso**, le quitamos las filas del dataset _aleatorio_ y generamos un nuevo dataset con esta información denominado _prueba_ compuesto por las 20 observaciones restantes.
+
+```{r}
+prueba <- caso[-caso1, ]
+prueba
+```
+
+<p style="background: #ffdd00; color:#343a40; font-weight:plain; padding:8px; border:3px solid #ffdd00; margin-top:20px; margin-bottom:10px; text-align:LEFT; font-size:20px; border-radius:10px;"> Análisis dataframe 'aleatorio'.</p>
+
+
+## 2. Análisis regresión variables shooting y dribbling.
+
+A continuación procedemos a realizar el análisis de **Regresión Lineal Simple** a partir del dataset _aleatorio_ con las variables **(x=shooting y y=dribbling)**:
+
+Ponemos estas variables en una tabla: data.frame
+
+```{r}
+regresion_simple <- data.frame(aleatorio$shooting, aleatorio$dribbling); t(regresion_simple)
+```
+## 2.1. Gráficos de dispersión y correlación.
+
+Para el gráfico de dispersión.
+
+```{r}
+plot(aleatorio$shooting, aleatorio$dribbling, pch=20)
+```
+
+
+Con etiquetas
+
+```{r}
+plot(aleatorio$shooting, aleatorio$dribbling, pch=20)
+text(aleatorio$shooting,
+     aleatorio$dribbling,                              
+     labels = paste("(",aleatorio$shooting, aleatorio$dribbling, ")"),
+     pos = 4, cex = 0.4)
+```
+
+Observamos que los puntos generan una tendencia lineal.
+
+## 2.2. Cálculo de los coeficientes de la recta de regresión.
+
+Calculemos el coeficiente de correlación.
+
+```{r}
+cor(aleatorio$shooting, aleatorio$dribbling)
+```
+Observamos que existe una relación lineal, no obstante, no es muy cercana a 1, lo cual quiere decir que no es una relación lineal muy fuerte.
+
+Modelo (recta) de los puntos
+
+```{r}
+modelo <- lm(dribbling ~ shooting, data=aleatorio); modelo
+```
+De acuerdo a esto, el modelo de regresión lineal simple está dado por:
+
+$$\hat{y}= 29.7390 +0.6131x$$
+
+Vamos a representar en un plano el gráfico de dispersión y la recta usando ggplot.
+
+```{r}
+ggplot(regresion_simple, aes(x=aleatorio.shooting, y= aleatorio.dribbling)) +
+  geom_point() + 
+  geom_smooth(method='lm', formula=y~x, se=FALSE, col='red')+
+  theme_light()
+```
+
+Cuando se hace un modelo de regresión lineal en R, este tiene cierta información oculta que es importante. Veamos
+
+```{r}
+names(modelo)
+```
+
+- **“coefficients”** : son los coeficientes del modelo
+
+```{r}
+modelo$coefficients
+```
+- **“fitted.values”**: valores ajustados, es decir, los valores sobre la recta
+
+```{r}
+modelo$fitted.values
+```
+- **“residuals”** : los errores o residuales $e_i= y-\hat{y}$
+
+```{r}
+modelo$residuals
+```
+- Podemos representar lo anterior en una tabla
+
+```{r}
+data.frame(x=regresion_simple$aleatorio.shooting , y=regresion_simple$aleatorio.dribbling , y_adj=modelo$fitted.values , err=modelo$residuals)
+```
+
+Análisis del modelo : lm(y~x)
+
+```{r}
+summary(modelo)
+```
+Residuales.
+
+Esta parte contiene la información de los residuales.
+
+```{r}
+summary(modelo$residuals)
+```
+Se observa que el mínimo y el máximo tienen signos contrarios. Además, se evidencia que la media está muy cerca de cero.
+
+## 2.3. Analice las pruebas de hipótesis sobre los parámetros.
+
+Ahora procedemos a  verificar si a partir del modelo encontrado con datos de la muestra 
+
+$$\hat{y}= \hat{\beta}_0+\hat{\beta}_1 .x$$
+podemos estimar la recta ideal de la población
+
+$$y= \beta_0+\beta_1 .x$$
+Para esto, tenemos dos pruebas de hipótesis
+
+1. Prueba de hipótesis para el coefiente $\beta_0$
+
+$$ \begin{cases} H_0 \, : \: \beta_0 = 0 \\ H_1 \ : \: \beta_0 \neq 0   \end{cases}$$
+En este caso, el p-value* es 2e-16, como es menor que $0.05$ entonces con un $95%$ de confianza podemos rechazar la hipótesis nula. Esto quiere decir que β0, que es el parámetro que se estima de la recta ideal de la población, es diferente de cero.
+
+Lo anterior, indica que la recta ideal no pasa por el origen, sin embargo, esta prueba de hipótesis podría aceptarse y en este caso lo que estamos diciendo es que la recta ideal de la población pasa por el origen con un 95% de confianza.
+
+
+2. Prueba de hipótesis para el coefiente $\beta_1$
+
+$$ \begin{cases} H_0 \, : \: \beta_1 = 0 \\ H_1 \ : \: \beta_1 \neq 0   \end{cases}$$
+En este caso, el p-value* es 2.2e−16, como es menor que 0.05 entonces con un 95% de confianza podemos rechazar la hipótesis nula. Esto quiere decir que β1, que es el parámetro que se estima de la recta ideal de la población, es diferente de cero.
+
+## 2.4. Identifique el coeficiente de determinación y analice la tabla ANOVA
+
+Ajuste del modelo : Prueba F-ANOVA
+
+Ahora procedemos a verificar que las diferencias entre los datos y las predicciones del modelo sean pequeñas.
+
+La tabla anova, nos permite examinar la siguiente prueba de hipótesis
+
+$$\begin{cases} H_0 \, : \, \text{el modelo lineal NO explica bien la respuesta}  \\ H_1 \, : \, \text{el modelo explica bien la respuesta}  \end{cases}$$
+Lo que es equivalente a 
+
+$$\begin{cases} H_0 \, : \, \beta_1=0 \\ H_1 \, : \, \beta_1  \neq 0  \end{cases}$$
+
+```{r}
+anova(modelo)
+```
+
+## 2.5. ¿Es un buen modelo para el conjunto de datos?
+
+De acuerdo con lo anterior, $p-value= 2.2 \times 10^{-16} \approx 0$, luego, rechazamos la hipótesis nula y por tanto el modelo explica bien la respuesta. Dado lo anterior, concluimos que el modelo tiene una capacidad predictiva significativa.
+
+<p style="background: #ffdd00; color:#343a40; font-weight:plain; padding:8px; border:3px solid #ffdd00; margin-top:20px; margin-bottom:10px; text-align:LEFT; font-size:20px; border-radius:10px;"> Análisis de residuos</p>
+
+verificaremos si se satisfacen las condiciones básicas el modelo de regresión.
+
+## 2.6. Análisis de residuos.
+
+### 2.6.1 Linealidad.
+
+Lo primero que debemos ver es si las variables $x$ , $y$ tienen una relación lineal, para ello, revisamos la correlación y planteamos la prueba de hipótesis.
+
+$$\begin{cases} H_0 \, : \, \rho =0 \quad \text{no existe relación lineal}  \\ H_1 \, : \, \rho \neq 0 \quad \text{ sí existe relación lineal}  \end{cases}$$
+y usamos el test cor.test
+
+```{r}
+cor.test(regresion_simple$aleatorio.shooting,regresion_simple$aleatorio.dribbling)
+```
+Como el $p-valor = 2.2e-16$ es menor que $0.05$ se rechaza la hipótesis nula y concluimos que existe una relación lineal.
+
+### 2.6.1.1. Linealidad de los residuos.
+
+Para verificar esta condición ya tenemos una idea importante de su cumplimiento por la relación lineal entre las variables por medio del cor.test. Sin embargo, para evaluarla revisemos la media de los residuos.
+
+```{r}
+residuos <- residuals(modelo)
+```
+
+```{r}
+mean(residuos)
+```
+Observemos que esta media es casi cero. Es un buen indicio de linealidad.
+
+Esta situación también la podemos observar de los residuos: graficando **Valores ajustados vs Residuos** en R : **fitted.values vs residuals**, esto se hace con *plot(modelo, 1)*
+
+```{r}
+plot(modelo, 1, pch=20)
+```
+
+Observamos entonces, que el gráfico presenta un aspecto totalmente aleatorio, sin patrón alguno. En esta gráfica la línea roja entre más horizontal sea, más fuerte sera la relación lineal.
+
+### 2.6.2. Normalidad.
+
+Para determinar la normalidad de los residuos podemos usar la instrucción plot(modelo, 2) o algún test de normalidad
+
+```{r}
+plot(modelo, 2, pch=20)
+```
+
+El comportamiento de la gráfica es bueno, ya que los puntos están distribuidos cerca a la recta.
+
+Podemos corroborar con un test. por ejemplo el de Kolmogorov-Smirnov ya que son más de 50 datos. Aplicamos el _lillie.test_
+
+```{r}
+lillie.test(residuos)
+```
+Como el $p-valor=0.2517$ es mayor que $\alpha=0.05$ no rechazamos la hipótesis nula, es decir, los residuos provienen de una distribución normal.
+
+Examinamos las gráficas:
+
+```{r}
+eda(residuos)
+```
+
+### 2.6.3. Homocedasticidad.
+
+Para revisar la homocedasticidad podemos utilizar la gráfica de valores ajustados vs residuos.Realizamos el test de _breuch-pagan_ para el siguiente planteamiento de hipótesis
+
+$$\begin{cases} H_0 \, : \; \text{los datos son homocedásticos} \\ H_1 \, : \, \text{los datos son heterocedásticos}   \end{cases}$$
+```{r}
+bptest(modelo)
+```
+Como el $p-valor=0.1504$ es mayor que $\alpha=0.05$ no rechazamos la hipótesis nula, es decir, se concluye la homocedásticidad de los datos.
+
+Gráficamente, podemos usar plot(modelo,3)
+
+```{r}
+plot(modelo, 3, pch = 20)
+```
+
+### 2.6.4. Independencia de los residuos.
+
+Para comprobar la no correlación para los residuos estudentizados del modelo ajustado. Se realiza a través del Test de Durbin-Watson (asume bajo la hipótesis nula que no existe correlación). La función *dwtest()* realiza este contraste directamente sobre los residuos estudentizados.
+
+$$\begin{cases} H_0 \, : \; \text{los errores no estan correlacionados} \\ H_1 \, : \, \text{los errores están correlacionados}   \end{cases}$$
+Aplicando el test *dwtest* de la librería *lmtest* tenemos
+
+```{r}
+dwtest(modelo)
+```
+el $p-valor=0.5104$ es mayor que $0.05$ no rechazamos la hipótesis nula y por tanto los residuos no están correlacionados, es decir, son independientes. 
+
+Gráficamente podemos verlo de dos maneras. Haciendo el gráfico de residuales.
+
+```{r}
+plot(residuos, pch=20)
+```
+
+
+Se observa que no hay patrón en los datos y esto son indicios de independencia.
+
+También podemos revisar la siguiente gráfica acf
+
+```{r}
+acf(residuos)
+```
+
+Observamos que a medida que avanzamos en el eje $x$, las lineas verticales no se salgan de la franja. Como observamos que esto ocurre, los residuales son independientes.
+
+Como resumen de las gráficas anteriores podemos tenerlas en una sola.
+
+```{r}
+par(mfrow=c(2,2))
+plot(modelo, pch=20)
+```
+
+## 2.7. Gráfica: residual vs leverage.
+
+Vamos a examinar la gráfica y su información
+
+```{r}
+plot(modelo, 5)
+```
+
+Esta gráfica es usada para identificar los valores atípicos y los puntos de apalancamiento. Donde los **Valores atípicos** son observaciones con residuos estandarizados mayores que +/- 2, las cuales se encuentran fuera de las líneas horizontales de referencia de la gráfica. Valores numéricamente distantes del resto de los datos. Y los **Puntos de apalancamiento (influyentes)** son observaciones con valores de apalancamiento por fuera de la distancia de Cook. Estos valores tienen bastante incidencia en el modelo, debido a que afectan notablemente la pendiente del modelo.
+
+Para determinar los valores atípicos , podemos usar, el método **Bonferroni**
+
+```{r}
+infIndexPlot(modelo, vars="Bonf", las = 1)
+```
+
+Nos muestra dos datos atípicos. Sin embargo, pueden o no ser influyentes en el modelo. Para esto, usamos el test con la distancia de *cook*.
+
+```{r}
+influenceIndexPlot(modelo, vars="Cook")
+```
+
+Los valores influyentes son aquellos que sobrepasan el umbral de $1$ en la distancia de *Cook*.
+
+## 2.8. Gráfica de intervalos de confianza y predicción del modelo.
+
+<p style="background: #ffdd00; color:#343a40; font-weight:plain; padding:8px; border:3px solid #ffdd00; margin-top:20px; margin-bottom:10px; text-align:LEFT; font-size:20px; border-radius:10px;"> Estimación de la regresión lineal. </p>
+
+Para el ejercicio trabajado, evaluaremos la **respuesta media** para un jugador cuyo shooting sea 46, (valor que no     pertenece al conjunto de valores dados).
+
+Recordemos que la regresión lineal estaba está dada por:
+
+$$\hat{y}= 29.7390 +0.6131x$$
+luego, si $x_0=46$, entonces $\hat{y}=29.7390 +0.6131(46)= 57.94$
+
+Comprobamos lo anterior en R , mediante la instrucción *predict*
+
+```{r}
+nuevo <- data.frame(shooting=c(46))
+ic = predict(modelo, nuevo, interval = "confidence", level = 0.95); ic
+```
+Vemos que en promedio, un jugador cuyo shooting sea de 46, implica que su dribbling será de 57.94, entre un intervalo de 56.67 y 59.20 y con un nivel de confianza del 95%.
+
+Además podemos graficar los intervalos de confianza de todos los valores.
+
+```{r}
+plot(aleatorio$shooting, aleatorio$dribbling, xlab = "Shooting", ylab = "Dribbling", main= "Intervalos de confianza", col="red", pch=20)
+abline(modelo)
+intconf <- predict(modelo, aleatorio, interval = "confidence")
+lines(aleatorio$shooting, intconf[,2], lty=1, col="pink")
+lines(aleatorio$shooting, intconf[,3], lty=1, col="pink")
+
+```
+
+Ahora procedemos a graficar el intervalo de predicción.
+
+```{r}
+nuevo1 <- data.frame(shooting=c(46))
+ip <- predict(modelo, nuevo1, interval = "prediction", level=c(0.90, 0.95, 0.99) ) ; ip
+```
+
+Podemos gráficar los intervalos de predicción
+
+```{r}
+plot(aleatorio$shooting, aleatorio$dribbling, xlab = "Shooting", ylab = "Dribbling", main= "Intervalos de predicción y confianza", col="red", pch=20)
+     
+abline(modelo)
+
+intconf1 <- predict(modelo, aleatorio, interval = "confidence", level = 0.95)
+
+lines(aleatorio$shooting, intconf1[,2], lty=2, col="pink")
+lines(aleatorio$shooting, intconf1[,3], lty=2, col="pink")
+
+ipp <- predict(modelo, aleatorio, interval = "prediction", level=0.95) 
+lines(aleatorio$shooting, ipp[,2], lty=2, col="green")
+lines(aleatorio$shooting, ipp[,3], lty=2, col="green")
+```
+
+Se evidencia que la recta del modelo se ajusta muy bien al intervalo de confianza, y además, la mayoría de los puntos están comprendidos dentro del intervalo de predicción, lo cual da cuenta de que el modelo tiene una capacidad predictiva significativa.
+
+## 2.9. Conjunto de prueba vs predictor.
+
+```{r}
+nuevox <- data.frame(shooting=c(69, 42, 78, 24, 33, 44, 64, 28, 61, 41, 56, 31, 29, 66, 68, 24, 56, 60, 50, 67))
+icx = predict(modelo, nuevox, interval = "confidence", level = 0.95); icx
+```
+
+```{r}
+Xconjunto_test <- c(69, 42, 78, 24, 33, 44, 64, 28, 61, 41, 56, 31, 29, 66, 68, 24, 56, 60, 50, 67)
+Yconjunto_test <- c(63, 71, 79, 47, 48, 59, 76, 31, 68, 50, 64, 49, 52, 74, 75, 28, 79, 58, 68, 67)
+Ymodelo <- c(72.04158, 55.48839, 77.55931, 44.45293, 49.97066, 56.71455, 68.97617, 46.90525, 67.13693, 54.87531, 64.07152, 48.74449, 47.51833, 70.20233, 71.42850, 44.45293, 64.07152, 66.52385, 60.39304, 70.81541)
+Diferencia <- c(-9.04158, 15.51161, 1.44069, 2.54707, -1.97066, 2.28545, 7.02383, -15.90525, 0.86306, -4.87531, 0.71520, 0.25551, 4.48167, 3.79767, 3.05715, -16.45293, 14.92848, -8.52385, 7.60696, -3.81541)
+
+```
+
+Tabla de diferencias.
+
+```{r}
+Tabla <- data.frame(Xconjunto_test, Yconjunto_test, Ymodelo, Diferencia);Tabla
+
+```
+
+# PARTE 3: Regresión Lineal Múltiple.
+
+<p style="background: #ffdd00; color:#343a40; font-weight:plain; padding:8px; border:3px solid #ffdd00; margin-top:20px; margin-bottom:10px; text-align:LEFT; font-size:20px; border-radius:10px;"> Para el ejercicio de regresión lineal múltiple, tomaremos como variable de respuesta (de interés) la variable value_eur. </p>
+
+- **value_eur:** Variable en formato numérico que significa el valor económico de un jugador en el mercado de pases.
+
+Y usaremos el dataset _caso_ el cual comprende toda la información original, es decir, 150 observaciones, 18 variables.
+
+De manera similar al modelo de regresión lineal, examinaremos los elementos a tener en cuenta en el modelo de regresión lineal múltiple, observaremos la linealidad, normalidad, homocedasticidad, independencia, no colinealidad.
+
+Estamos interesados en establecer una relación entre la variable de respuesta _value_eur_ y las otras variables presentes.
+
+## Exploración de la relación entre las variables.
+
+En este primer paso, una vez se haya organizado la base datos se examina la relación que existe entre las diferentes variables presentes. Es importante observar aquellas variables o predictores que guarden alguna relación lineal entre sí. Esta información es importante para determinar los mejores predictores del modelo.
+
+Para este paso utilizamos los gráficos de dispersión, la matriz de coeficientes de correlación y revisamos los histogramas de las variables
+
+## 3.1. Matriz de Correlación.
+
+Antes de generar la matriz de correlación, debemos quitar las variables categóricas dado que la función $cor$ no admite variables categóricas. Para ello, seleccionamos los nombres del dataframe que deseamos quitar, en este caso son "club", "preferred_foot" y "team_position".
+
+Quitamos también la variable "...1" Ya que no aporta información valiosa para el análisis.
+
+```{r}
+names(caso)
+```
+
+Llamamos **caso2** al dataframe sin las variables categóricas-.
+
+
+```{r}
+borrar <- c("club", "preferred_foot", "team_position", "...1")
+caso2 <- caso[, !(names(caso) %in% borrar)]
+
+head(caso2, n=5)
+```
+
+- **Matriz de Correlación:**
+
+```{r}
+round(cor(caso2),2)
+```
+- Observamos que la variable **value_eur**, tiene una mayor relación de tipo lineal con las variables _overall_, _potential_, _wage_eur_ y _release_clause_eur_.
+
+- Las variables _wage_eur_ y _release_clause_eur_ tiene una relación lineal mayor que las otras variables, esto sugiere que una de las dos no debería ir en el modelo.
+
+**Observación:** Omitimos las gráficas ggpairs de GGally y multi.hist de psych ya que al haber 14 variables numéricas, los gráficos generados no se ven claramente.
+
+## 3.2. Modelo.
+
+- <span style="color:red">Selección de los mejores predictores</span> 
+
+### 3.2.1. Modelo sin variables explicativas.
+
+Para ello podemos usar la expresión formula = _variable ~ 1_
+
+```{r}
+modsinvariables <- lm(formula=caso2$value_eur~1, caso2)
+summary(modsinvariables)
+```
+### 3.2.2. Modelo con todas las variables explicativas.
+
+```{r}
+modcompleto <- lm(formula=caso2$value_eur~., caso2)
+summary(modcompleto)
+```
+Observamos que de las variables explicativas, hay algunas que tienen un $p-value > 0.05$ en la prueba de hipótesis $H_0 : \beta_i = 0$ y serían candidatas a no estar en el modelo porque no son significativas, tales como: age, height_cm, weight_kg, potential, shooting, passing, defending, physic, pace.
+
+### 3.2.3. Dirección forward
+
+```{r}
+modforward <- step(modsinvariables, 
+                   scope = list(lower=modsinvariables, upper = modcompleto),
+                   direction = "forward")
+```
+
+```{r}
+summary(modforward)
+```
+```{r}
+summary(lm(formula = caso2$value_eur ~ release_clause_eur + wage_eur + overall + weight_kg, data = caso2))
+```
+
+### 3.2.4. Dirección backward
+
+```{r}
+modbackward <- step(modcompleto, 
+                   scope = list(lower=modsinvariables, 
+                                upper = modcompleto),
+                   direction = "backward")
+```
+```{r}
+summary(modbackward)
+```
+### 3.2.5. Dirección Stepwise-Mixta.
+
+```{r}
+modmixto <- step(modsinvariables, 
+                   scope = list(lower=modsinvariables, 
+                                upper = modcompleto),
+                   direction = "both")
+```
+```{r}
+summary(modmixto)
+```
+Otra forma de encontrar el modelo con la instrucción step es:
+
+```{r}
+step(object = lm(caso2$value_eur~ . , caso2),  
+     direction = "both", 
+     trace = 1) # "mejor modelo"
+```
+De ahí podemos observar que el mejor modelo por este método es:
+
+```{r}
+modeloBest <- lm(formula = caso2$value_eur ~ weight_kg + overall + wage_eur + 
+    release_clause_eur, data = caso2)
+
+summary(modeloBest)
+```
+Veamos los intervalos de confianza de cada uno de los parámetros.
+
+```{r}
+confint(lm(formula = caso2$value_eur ~ weight_kg + overall + wage_eur + 
+    release_clause_eur, data = caso2))
+```
+## 3.3. Validación de las Hipótesis del modelo.
+
+Verificación de las hipótesis del modelo de regresión lineal múltiple.
+
+### 3.3.1 Relación lineal entre los predictores y la variable de respuesta.
+
+Como en el modelo lineal simple, esto se observa de los diagramas de dispersión de las variables.
+
+```{r}
+names(caso2)
+```
+```{r}
+round(cor(caso2[,c(3, 4, 7, 8)]),4)
+```
+### 3.3.2. Gráfica de predictor vs residual, de cada uno de los predictores.
+
+Recordemos, que debe haber una distribución alrededor de cero aleatoriamente.
+
+Usando ggplot y la instrucción librería gridExtra para hacer varios gráficos en un solo panel.
+
+```{r}
+grafica1 <- ggplot(data = caso2, aes(weight_kg,              modeloBest$residuals)) +
+    geom_point() + 
+    geom_smooth(formula = y~x, color = "red", method = "loess") + 
+    geom_hline(yintercept = 0) +
+    theme_bw()
+
+grafica2 <- ggplot(data = caso2, aes(overall, modeloBest$residuals))+
+            geom_point() + 
+            geom_smooth(formula = y~x, color = "red", method = "loess") + 
+            geom_hline(yintercept = 0) +
+            theme_bw()
+
+grafica3 <- ggplot(data = caso2, aes(wage_eur, modeloBest$residuals))+
+            geom_point() + 
+            geom_smooth(formula = y~x, color = "red", method = "loess") + 
+            geom_hline(yintercept = 0) +
+            theme_bw()
+
+grafica4 <- ggplot(data = caso2, aes(release_clause_eur, modeloBest$residuals))+
+            geom_point() + 
+            geom_smooth(formula = y~x, color = "red", method = "loess") + 
+            geom_hline(yintercept = 0) +
+            theme_bw()
+
+
+grid.arrange(grafica1, grafica2, grafica3, grafica4)
+```
+
+
+Observe, que se cumple la relación lineal entre cada uno de los predictores y la variable de respuesta. Esto se da, ya que en una relación lineal entre predictores y variable de respuesta se da cuando los residuos se distribuyen aleatoriamente alrededor de cero a lo largo del eje $x$.
+
+### 3.3.3. Linealidad de los residuos.
+
+Calculamos la media de los residuos.
+
+```{r}
+mean(modeloBest$residuals)
+```
+
+```{r}
+plot(modeloBest,1, pch=20)
+```
+
+Observamos que los datos están dispersos y no hay patrón, además de que la recta roja se comporta bastante bien (tiende a ser horizontal).
+
+### 3.3.4. Normalidad.
+
+Examinemos el qqPlot, la gráfica cuantil_muestra-cuantil_teórico
+
+```{r}
+qqPlot(modeloBest$residuals,  pch=20)
+```
+```{r}
+plot(modeloBest,2,pch=20)
+```
+
+Los puntos están cerca a la recta, es un buen indicio de normalidad. Veamos un par de test de normalidad.
+
+```{r}
+shapiro.test(modeloBest$residuals)
+```
+```{r}
+lillie.test(modeloBest$residuals)
+```
+```{r}
+ad.test(modeloBest$residuals)
+```
+En este punto notamos que para todos los casos, el $p-value<0.05$, por tanto, se rechaza la hipótesis nula y esto comprueba que los residuos no provienen de una distribución normal.
+
+### 3.3.5. Homocedasticidad.
+
+```{r}
+plot(modeloBest,3, pch=20)
+```
+
+Estos valores deben estar distribuidos de manera aleatoria alrededor de cero sin ningún patrón. Para confirmar usamos el test de Breuch-Pagan.
+
+```{r}
+bptest(modeloBest) 
+```
+Se rechaza la homocedasticidad de los residuos, ya que $p-value<0.05$.
+
+### 3.3.6. No Multicolinealidad.
+
+tener en cuenta que:
+
+- Si $VIF=1$ ausencia total de colinealidad
+
+- Si $1 < VIF < 5$ puede haber afectación, no en gran medida, de la colinealidad.
+
+- Si $VIF>5$ se evidencia un índice alto de colinealidad
+
+En este último caso, se debería examinar el modelo y excluir uno de los predictores que generen problema. 
+
+Para examinar la multicolinealidad, cargamos la librería *corrplot* y usamos la instrucción con el mismo nombre
+
+```{r}
+corrplot(cor(data.frame(caso2$weight_kg,caso2$overall, caso2$wage_eur, caso2$release_clause_eur)), method = "number", tl.col = "black", type = "upper")
+```
+
+Ahora, calculamos la inflación de la varianza para determinar relaciones de una variable, ya no con otra individualmente, sino con varias. Para ello usamos la instrucción VIF del paquete car.
+
+```{r}
+data.frame(vif(modeloBest)) 
+```
+
+Observemos, que no hay valores altos de VIF lo cual implica que no hay predictores que muestren una correlación lineal alta. Entonces se verifica la no multicolinealidad.
+
+- Observamos que existe $1 < VIF < 5$ puede haber afectación, no en gran medida, de la colinealidad.
+
+### 3.3.7. Independencia.
+
+Podemos usar el test de Durbin-Watson y algún método gráfico de apoyo.
+
+```{r}
+dwtest(modeloBest)
+```
+como el $p-value>0.05$ entones no rechazamos la hipótesis nula de que los residuos son independientes.
+
+```{r}
+plot(modeloBest$residuals)
+```
+
+no se observa ningún patrón en estos datos, además
+
+```{r}
+acf(modeloBest$residuals)
+```
+
+los residuos evolución de manera adecuada ingresando a la región.
+
+Finalmente,
+
+### 3.3.8. Identificación de Valores Atípicos.
+
+Podemos usar las siguientes gráficas,
+
+```{r}
+plot(modeloBest,5)
+```
+
+Observamos que existe un dato atípico: **67**, vreificaremos más adelante si este es un valor influyente.
+
+```{r}
+plot(modeloBest,4)
+```
+
+Observamos que e valor atípico **67** sí es influyente porque supera la barrera de 1 en la distancia de Cook.
+
+```{r}
+influenceIndexPlot(modeloBest, vars="Bonf", las=1)
+```
+
+Nos muestra dos datos atípico, ver gráfico anterior, y un dato influyente, ver gráfico subsecuente.
+
+```{r}
+influenceIndexPlot(modeloBest, vars="Cook")
+```
+
+La gráfica de puntos de influencia se hace mediante:
+
+```{r}
+influencePlot(modeloBest)
+```
+
+# Conclusiones, modelo regresión lineal múltiple.
+
+Las variables de respuesta más significativas se hallaron mediante las direcciones _forward_, _backward_ y _Stepwise-Mixta_, en todos los casos, las variables de respuesta más significativas fueron las siguientes: _release_clause_eur, _wage_eur_, _overall_ y _weight_kg_.
+
+A partir del mejor modelo generado a partir de estas variables, se realizó el análisis de los residuos para comprobar todas las hipótesis del modelo de regresión lineal múltiple. 
+
+En la linealidad, observamos que los datos están dispersos y no hay patrón, además de que la recta roja se comporta bastante bien (tiende a ser horizontal).
+
+En cuanto a la normalidad, los puntos están cerca a la recta, lo que significa que eses un buen indicio de normalidad. 
+
+No obstante, al aplicar los test de shapiro y lillie (Kolmogorov-Smirnov) para todos los casos, el p−value<0.05, por tanto, se rechaza la hipótesis nula y hay indicio de que los residuos no provienen de una distribución normal.
+
+Para la homocedasticidad, vemos que algunos valores no estan distribuidos de manera aleatoria alrededor de cero sin ningún patrón. Adicionalmente, usamos el test de Breuch-Pagan, el cual rechaza la homocedasticidad de los residuos.
+
+Para la no multicolinealidad, se observa que la variable _release_clause_eur_ tiene un VIF, cercano a 5, esto quiere decir que puede haber afectación, no en gran medida, de la colinealidad.
+
+En referencia a la independencia, usamos el test de Durbin-Watson y evidenciamos que el p-value es mayor que 0.05, lo cual significa que no rechazamos la hipótesis nula de que los residuos son independientes.
+
+Por último, hallamos un valor atípico e influyente que traspasa la distancia de Cook.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
